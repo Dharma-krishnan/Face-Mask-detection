@@ -28,7 +28,7 @@ def detect_mask(frame):
 st.title("Real-time Face Mask Detection")
 
 # Open the webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(cv2.CAP_ANY)
 
 if not cap.isOpened():
     st.error("Error: Could not open webcam.")

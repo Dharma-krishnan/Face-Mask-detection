@@ -76,4 +76,10 @@ tenacity==8.2.2
 tensorboard==2.15.1
 tensorboard-data-server==0.7.1
 tensorflow==2.15.0
-
+streamlit==1.18.0
+tensorflow==2.15.0
+opencv-python==4.8.1.78
+numpy
+Pillow
+deepface==0.0.79
+streamlit-webrtc==0.11.0

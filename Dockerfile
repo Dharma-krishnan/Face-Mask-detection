@@ -1,51 +1,20 @@
-# Use an official Python runtime as the base image
-FROM python:3.9-slim-buster
+# Use an official Python runtime as a parent image
+FROM python:3.8-slim
 
-# Set the working directory in the container
+# Set the working directory to /app
 WORKDIR /app
 
-# Add the current directory to the container
-ADD . /app
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
-    pkg-config \
-    wget \
-    libboost-all-dev \
-    libgtk-3-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    gfortran \
-    openexr \
-    libatlas-base-dev \
-    libopenblas-dev \
-    liblapack-dev \
-    libblas-dev \
-    libhdf5-dev \
-    libhdf5-serial-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install any needed packages specified in requirements.txt
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Make port 8080 available to the world outside this container
+EXPOSE 8080
 
-# Set up environment variables
-ENV STREAMLIT_SERVER_URL=http://localhost:8501 \
-    STREAMLIT_RUN_ON_SAVE=true \
-    GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+# Define environment variable
+ENV NAME World
 
-# Expose the Streamlit app port
-EXPOSE 8501
-
-# Run the Streamlit app
-CMD ["streamlit", "run", "app.py"]
+# Run app.py when the container launches
+CMD ["python", "app.py"]

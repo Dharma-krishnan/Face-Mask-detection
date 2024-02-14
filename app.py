@@ -1,27 +1,48 @@
+import streamlit as st
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array, preprocess_input
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from deepface import DeepFace
-import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
 
-# Load the face mask detection model
-model = load_model('model.h5')
+# Load the trained mask detection model
+model = load_model("mask_detection_model.h5")
 
-# Load the face cascade classifier
+# Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-class FaceMaskTransformer(VideoTransformerBase):
-    def transform(self, frame):
-        # Preprocess the frame
-        resized_frame = cv2.resize(frame, (128, 128))
-        resized_frame = img_to_array(resized_frame)
-        resized_frame = preprocess_input(resized_frame)
-        resized_frame = np.expand_dims(resized_frame, axis=0)
+# Create a function for real-time mask detection
+def detect_mask(frame):
+    # Preprocess the frame
+    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-        # Perform prediction
-        predictions = model.predict(resized_frame)
+    # Perform prediction
+    predictions = model.predict(resized_frame)
+    return predictions
+
+# Streamlit web app
+st.title("Real-time Face Mask Detection")
+
+# Open the webcam
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    st.error("Error: Could not open webcam.")
+
+else:
+    stframe = st.empty()
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            st.error("Error: Unable to capture frame.")
+            break
+        
+        # Perform mask detection
+        predictions = detect_mask(frame)
         label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
@@ -33,7 +54,7 @@ class FaceMaskTransformer(VideoTransformerBase):
             face = frame[y:y + h, x:x + w]
 
             # Perform mask detection
-            predictions = model.predict(resized_frame)
+            predictions = detect_mask(frame)
             label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
             color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
@@ -43,6 +64,8 @@ class FaceMaskTransformer(VideoTransformerBase):
                 results = results[0]
                 age = results['age']
                 gender = results['dominant_gender']
+                # print(results)
+                # print(type(results[0]))
 
                 # Display age and gender estimation
                 cv2.putText(frame, f'Age: {age:.1f} years', (x, y - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
@@ -52,10 +75,13 @@ class FaceMaskTransformer(VideoTransformerBase):
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
             cv2.putText(frame, label, (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
-        return frame
+        # Convert the frame to RGB for Streamlit
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Display the frame using Streamlit
+        stframe.image(frame_rgb, channels="RGB", use_column_width=True)
+        
+        cv2.waitKey(1)
 
-# Streamlit web app
-st.title("Real-time Face Mask Detection")
-
-# Start the WebRTC streamer
-webrtc_streamer(key="example", video_transformer_factory=FaceMaskTransformer)
+    cap.release()
+    cv2.destroyAllWindows()

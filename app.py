@@ -15,33 +15,59 @@ model = load_model("mask_detection_model.h5")
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+# Function for real-time mask detection
+
+
+# def detect_mask(frame):
+# Preprocess the frame
+# resized_frame = cv2.resize(frame, (128, 128))
+# resized_frame = img_to_array(resized_frame)
+# resized_frame = preprocess_input(resized_frame)
+# resized_frame = np.expand_dims(resized_frame, axis=0)
+
+# # Perform prediction
+# predictions = model.predict(resized_frame)
+# return predictions
+
 # Define the video frame callback function
+
+
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
+    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-    # Perform face detection
+    # Perform prediction
+    predictions = model.predict(resized_frame)
+    # Perform mask detection
+    # predictions = detect_mask(img)
+    label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
+    color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
 
-    # Iterate over detected faces
+    # Display the frame with the label
     for (x, y, w, h) in faces:
-        face_img = img[y:y+h, x:x+w]
+        # If no mask is detected, estimate age and gender
+        if label == "No Mask":
+            results = DeepFace.analyze(
+                img[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
+            results = results[0]
+            age = results['age']
+            gender = results['dominant_gender']
+            cv2.putText(img, f'Age: {age:.1f} years', (x, y - 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(img, f'Gender: {gender}', (x, y - 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-        # Preprocess the face image for mask detection
-        resized_face = cv2.resize(face_img, (128, 128))
-        resized_face = img_to_array(resized_face)
-        resized_face = preprocess_input(resized_face)
-        resized_face = np.expand_dims(resized_face, axis=0)
-
-        # Perform mask detection
-        predictions = model.predict(resized_face)
-        label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
-        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
-
-        # Display the label and bounding box on the original frame
+        # Display mask detection result
         cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv2.putText(img, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.putText(img, label, (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
     return av.VideoFrame.from_ndarray(img, format="bgr24")
 
@@ -49,5 +75,10 @@ def video_frame_callback(frame):
 # Streamlit web app
 st.title("Real-time Face Mask Detection")
 
-# Start the webcam stream with WebRTC
-webrtc_streamer(key="example", video_processor_factory=video_frame_callback)
+# Start the webcam stream
+# webrtc_streamer(
+#     key="example",
+#     video_processor_factory=video_frame_callback(frame),
+#     async_processing=True,
+# )
+webrtc_streamer(key="example", video_frame_callback=video_frame_callback)

@@ -73,7 +73,7 @@ streamlit>=1.18.0
 tenacity==8.2.2
 tensorboard==2.15.1
 tensorboard-data-server==0.7.1
-opencv-python==4.5.4.60
+opencv-python>=4.5.4.60,<4.8.0
 tensorflow==2.15.0
 opencv-python-headless==4.9.0.80
 streamlit==1.8.0

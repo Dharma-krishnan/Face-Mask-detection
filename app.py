@@ -9,7 +9,7 @@ from streamlit_webrtc import webrtc_streamer
 import av
 
 # Load the trained mask detection model
-model = load_model("mask_detection_model.h5")
+model = load_model("./mask_detection_model.h5")
 
 # Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(
@@ -34,7 +34,7 @@ face_cascade = cv2.CascadeClassifier(
 
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
-    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = cv2.resize(img, (128, 128))  # Corrected resize function
     resized_frame = img_to_array(resized_frame)
     resized_frame = preprocess_input(resized_frame)
     resized_frame = np.expand_dims(resized_frame, axis=0)
@@ -42,7 +42,6 @@ def video_frame_callback(frame):
     # Perform prediction
     predictions = model.predict(resized_frame)
     # Perform mask detection
-    # predictions = detect_mask(img)
     label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
     color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
@@ -76,9 +75,13 @@ def video_frame_callback(frame):
 st.title("Real-time Face Mask Detection")
 
 # Start the webcam stream
-# webrtc_streamer(
-#     key="example",
-#     video_processor_factory=video_frame_callback(frame),
-#     async_processing=True,
-# )
-webrtc_streamer(key="example", video_frame_callback=video_frame_callback)
+
+
+webrtc_streamer(
+    key="example",
+    video_frame_callback=video_frame_callback,  # Pass the function itself
+    async_processing=True,
+    rtc_configuration={
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    }
+)

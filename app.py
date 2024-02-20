@@ -72,7 +72,7 @@ def video_frame_callback(frame):
 
 
 # Streamlit web app
-st.title("Real-time Face Mask Detection")
+st.title("Face Mask Detection")
 
 # Start the webcam stream
 

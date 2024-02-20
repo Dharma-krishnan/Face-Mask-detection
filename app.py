@@ -85,5 +85,5 @@ webrtc_streamer(
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
-st.header("created by dharma")
+st.footer("created by dharma")
 

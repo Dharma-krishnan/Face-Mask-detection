@@ -86,17 +86,6 @@ webrtc_streamer(
     }
 )
 
-st.markdown(
-    """
-    <style>
-    .reportview-container {
-        background: linear-gradient(135deg, #3498db, #8e44ad);
-        color: white;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 footer="""<style>
 a:link , a:visited{

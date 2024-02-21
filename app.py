@@ -112,12 +112,9 @@ webrtc_streamer(
 
 
 #uploading file from the user 
-def process_video(input_path, output_path):
+def process_video(input_path, output_folder):
     video_capture = cv2.VideoCapture(input_path)
-    fps = int(video_capture.get(cv2.CAP_PROP_FPS))
-    frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
+    frame_count = 0
 
     while True:
         ret, frame = video_capture.read()
@@ -129,11 +126,18 @@ def process_video(input_path, output_path):
             gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
         predictions = detect_mask(frame)
         processed_frame = draw_rectangles(frame, faces, predictions)
-        out.write(processed_frame)
+
+        # Save the processed frame as an image
+        output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+        cv2.imwrite(output_path, processed_frame)
+
+        frame_count += 1
 
     video_capture.release()
-    out.release()
 
+st.title("Face Mask Detection")
+
+# Upload a video file
 st.title("Face Mask Detection")
 
 # Upload a video file
@@ -145,12 +149,19 @@ if uploaded_file is not None:
         temp_file.write(uploaded_file.read())
         temp_file_path = temp_file.name
 
-    # Process the video and save the result to a temporary file
-    output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
-    process_video(temp_file_path, output_video_path)
+    # Create a temporary folder to store processed frames
+    temp_folder = tempfile.mkdtemp()
 
-    # Display the output video with detections
-    st.video(output_video_path)
+    # Process the video and save frames with detections
+    process_video(temp_file_path, temp_folder)
+
+    # Display the processed frames as images
+    for filename in sorted(os.listdir(temp_folder)):
+        st.image(os.path.join(temp_folder, filename))
+
+    # Cleanup: delete temporary video file and folder
+    os.remove(temp_file_path)
+    os.rmdir(temp_folder)
 
 # Define the path to the validation data directory
 # validation_data_directory = "data"

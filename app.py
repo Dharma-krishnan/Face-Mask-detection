@@ -19,16 +19,40 @@ face_cascade = cv2.CascadeClassifier(
 # Function for real-time mask detection
 
 
-# def detect_mask(frame):
-# Preprocess the frame
-# resized_frame = cv2.resize(frame, (128, 128))
-# resized_frame = img_to_array(resized_frame)
-# resized_frame = preprocess_input(resized_frame)
-# resized_frame = np.expand_dims(resized_frame, axis=0)
+def detect_mask(frame):
+    # Preprocess the frame
+    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-# # Perform prediction
-# predictions = model.predict(resized_frame)
-# return predictions
+# Perform prediction
+    predictions = model.predict(resized_frame)
+    return predictions
+
+def draw_rectangles(frame, faces, predictions):
+    for (x, y, w, h), prediction in zip(faces, predictions):
+        # Perform mask detection
+        label = "Mask" if np.argmax(prediction) == 1 else "No Mask"
+        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        thickness = 2 if label == "Mask" else 3
+        
+        # Draw rectangle around the face
+        cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
+        
+        # If no mask is detected, estimate age and gender
+        if label == "No Mask":
+            results = DeepFace.analyze(
+                frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
+            results = results[0]
+            age = results['age']
+            gender = results['dominant_gender']
+            cv2.putText(frame, f'Age: {age:.1f} years', (x, y - 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+    
+    return frame
 
 # Define the video frame callback function
 
@@ -87,32 +111,35 @@ webrtc_streamer(
 
 
 #uploading file from the user 
-st.title("Upload a video")
+st.title("Face Mask Detection")
+
+#file uploader
 uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
 
 if uploaded_file is not None:
-    # Save the uploaded video to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(uploaded_file.read())
-        temp_file_path = temp_file.name
+    video_bytes = uploaded_file.read()
+    video_np_array = np.frombuffer(video_bytes, np.uint8)
+    video_cv2 = cv2.imdecode(video_np_array, cv2.IMREAD_COLOR)
+    video_frame_generator = cv2.VideoCapture(video_cv2)
 
-    # Create the video frame generator
-    video_frame_generator = cv2.VideoCapture(temp_file_path)
-
-    # Process the video frames
     while True:
         ret, frame = video_frame_generator.read()
         if not ret:
             break
-
-        av_frame = av.VideoFrame.from_ndarray(frame, format="bgr24")
-        processed_frame = video_frame_callback(av_frame)
-
-        st.image(processed_frame.to_ndarray(format="bgr24"), channels="BGR")
-
-    # Release the video frame generator and delete the temporary file
-    video_frame_generator.release()
-    os.unlink(temp_file_path)
+        
+        # Detect faces in the frame
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(
+            gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+        
+        # Detect masks for the faces
+        predictions = detect_mask(frame)
+        
+        # Draw rectangles on the frame indicating mask or no mask
+        processed_frame = draw_rectangles(frame, faces, predictions)
+        
+        # Display the processed frame
+        st.image(processed_frame, channels="BGR")
 
 # Define the path to the validation data directory
 # validation_data_directory = "data"

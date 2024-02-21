@@ -76,7 +76,7 @@ def video_frame_callback(frame):
 st.title("Face Mask Detection")
 
 # Start the webcam stream
-webrtc_ctx = webrtc_streamer(
+webrtc_streamer(
     key="example",
     video_frame_callback=video_frame_callback,  # Pass the function itself
     async_processing=True,
@@ -86,36 +86,30 @@ webrtc_ctx = webrtc_streamer(
 )
 
 # Define the path to the validation data directory
-validation_data_directory = "data"
+# validation_data_directory = "data"
 
-# Load validation data
-validation_datagen = ImageDataGenerator(
-    rescale=1.0/255.0
-)
+# # Load validation data
+# validation_datagen = ImageDataGenerator(
+#     rescale=1.0/255.0
+# )
 
-validation_generator = validation_datagen.flow_from_directory(
-    validation_data_directory,
-    target_size=(128, 128),
-    batch_size=32,
-    class_mode="categorical",
-    classes=["without_mask", "with_mask"]
-)
+# validation_generator = validation_datagen.flow_from_directory(
+#     validation_data_directory,
+#     target_size=(128, 128),
+#     batch_size=32,
+#     class_mode="categorical",
+#     classes=["without_mask", "with_mask"]
+# )
 
 # Evaluate model
-loss, accuracy = model.evaluate(validation_generator)
+# loss, accuracy = model.evaluate(validation_generator)
 
-# Streamlit web app
-st.title("Mask Detection Model Evaluation")
-st.write("Validation Loss:", loss)
-st.write("Validation Accuracy:", accuracy)
+# # Streamlit web app
+# st.title("Mask Detection Model Evaluation")
+# st.write("Validation Loss:", loss)  #237/237 [==============================] - 26s 107ms/step - loss: 0.0137 - accuracy: 0.996
+# st.write("Validation Accuracy:", accuracy)
 
 
-# Button to clear cache
-if not webrtc_ctx.video_processor:
-    st.warning("Waiting for video stream to start...")
-else:
-    if st.button("Clear Cache"):
-        st.caching.clear_cache()
 
 footer="""<style>
 a:link , a:visited{

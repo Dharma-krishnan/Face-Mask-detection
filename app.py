@@ -32,7 +32,7 @@ face_cascade = cv2.CascadeClassifier(
 
 # Define the video frame callback function
 
-@st.cache
+
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
     resized_frame = cv2.resize(img, (128, 128))  # Corrected resize function

@@ -9,6 +9,7 @@ from streamlit_webrtc import webrtc_streamer
 import av
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tempfile
+import os
 # Load the trained mask detection model
 model = load_model("mask_detection_model.h5")
 

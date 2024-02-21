@@ -86,7 +86,7 @@ webrtc_ctx = webrtc_streamer(
 )
 
 # Define the path to the validation data directory
-validation_data_directory = "face_mask_detection.py"
+validation_data_directory = "data"
 
 # Load validation data
 validation_datagen = ImageDataGenerator(

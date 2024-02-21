@@ -8,7 +8,7 @@ from deepface import DeepFace
 from streamlit_webrtc import webrtc_streamer
 import av
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
+import tempfile
 # Load the trained mask detection model
 model = load_model("mask_detection_model.h5")
 
@@ -85,14 +85,21 @@ webrtc_streamer(
     }
 )
 
+
+#uploading file from the user 
 st.title("Upload a video")
 uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
 
 if uploaded_file is not None:
-    video_bytes = uploaded_file.read()
-    video_np_array = np.frombuffer(video_bytes, np.uint8)
-    video_frame_generator = cv2.VideoCapture(video_np_array)
+    # Save the uploaded video to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(uploaded_file.read())
+        temp_file_path = temp_file.name
 
+    # Create the video frame generator
+    video_frame_generator = cv2.VideoCapture(temp_file_path)
+
+    # Process the video frames
     while True:
         ret, frame = video_frame_generator.read()
         if not ret:
@@ -103,6 +110,9 @@ if uploaded_file is not None:
 
         st.image(processed_frame.to_ndarray(format="bgr24"), channels="BGR")
 
+    # Release the video frame generator and delete the temporary file
+    video_frame_generator.release()
+    os.unlink(temp_file_path)
 
 # Define the path to the validation data directory
 # validation_data_directory = "data"

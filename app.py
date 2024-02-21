@@ -146,8 +146,6 @@ st.title("Face Mask Detection")
 # Upload a video file
 uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
 
-uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
-
 if uploaded_file is not None:
     # Save the uploaded video to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:

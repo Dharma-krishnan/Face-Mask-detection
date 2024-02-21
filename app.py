@@ -31,7 +31,7 @@ face_cascade = cv2.CascadeClassifier(
 
 # Define the video frame callback function
 
-
+@st.cache
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
     resized_frame = cv2.resize(img, (128, 128))  # Corrected resize function
@@ -77,7 +77,7 @@ st.title("Face Mask Detection")
 # Start the webcam stream
 
 
-webrtc_streamer(
+webrtc_ctx = webrtc_streamer(
     key="example",
     video_frame_callback=video_frame_callback,  # Pass the function itself
     async_processing=True,
@@ -85,7 +85,12 @@ webrtc_streamer(
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
-
+# Button to clear cache
+if not webrtc_ctx.video_processor:
+    st.warning("Waiting for video stream to start...")
+else:
+    if st.button("Clear Cache"):
+        st.caching.clear_cache()
 
 footer="""<style>
 a:link , a:visited{

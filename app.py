@@ -85,6 +85,27 @@ webrtc_streamer(
     }
 )
 
+st.title("Upload a video")
+#file uploader
+uploaded_file= st.file_uploader("upload a video",type=["mp4"])
+
+if uploaded_file is not None:
+    video_bytes = uploaded_file.read()
+    video_np_array = np.frombuffer(video_bytes, np.uint8)
+    video_cv2=cv2.imdecode(video_np_array, cv2.IMREAD_COLOR)
+    video_frame_generator=cv2.VideoCapture(video_cv2)
+
+    while True:
+        ret,frame = video_frame_generator.read()
+        if not ret:
+            break
+
+        av_frame=av.VideoFrame.from_ndarray(frame, format="bgr24")
+        processed_frame = video_frame_callback(av_frame)
+
+        st.image(processed_frame.to_ndarray(format="bgr24"),channels="BGR")
+
+
 # Define the path to the validation data directory
 # validation_data_directory = "data"
 

@@ -111,35 +111,45 @@ webrtc_streamer(
 
 
 #uploading file from the user 
-st.title("Face Mask Detection")
-
-#file uploader
-uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
-
-if uploaded_file is not None:
-    video_bytes = uploaded_file.read()
-    video_np_array = np.frombuffer(video_bytes, np.uint8)
-    video_cv2 = cv2.imdecode(video_np_array, cv2.IMREAD_COLOR)
-    video_frame_generator = cv2.VideoCapture(video_cv2)
+def process_video(input_path, output_path):
+    video_capture = cv2.VideoCapture(input_path)
+    fps = int(video_capture.get(cv2.CAP_PROP_FPS))
+    frame_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
 
     while True:
-        ret, frame = video_frame_generator.read()
+        ret, frame = video_capture.read()
         if not ret:
             break
-        
-        # Detect faces in the frame
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(
             gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
-        
-        # Detect masks for the faces
         predictions = detect_mask(frame)
-        
-        # Draw rectangles on the frame indicating mask or no mask
         processed_frame = draw_rectangles(frame, faces, predictions)
-        
-        # Display the processed frame
-        st.image(processed_frame, channels="BGR")
+        out.write(processed_frame)
+
+    video_capture.release()
+    out.release()
+
+st.title("Face Mask Detection")
+
+# Upload a video file
+uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
+
+if uploaded_file is not None:
+    # Save the uploaded video to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(uploaded_file.read())
+        temp_file_path = temp_file.name
+
+    # Process the video and save the result to a temporary file
+    output_video_path = os.path.join(tempfile.gettempdir(), "output_video.mp4")
+    process_video(temp_file_path, output_video_path)
+
+    # Display the output video with detections
+    st.video(output_video_path)
 
 # Define the path to the validation data directory
 # validation_data_directory = "data"

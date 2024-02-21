@@ -60,3 +60,4 @@ model.fit(
 
 # Save the model
 model.save("mask_detection_model.h5")
+

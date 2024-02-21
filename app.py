@@ -7,6 +7,7 @@ from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from deepface import DeepFace
 from streamlit_webrtc import webrtc_streamer
 import av
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # Load the trained mask detection model
 model = load_model("mask_detection_model.h5")
@@ -75,8 +76,6 @@ def video_frame_callback(frame):
 st.title("Face Mask Detection")
 
 # Start the webcam stream
-
-
 webrtc_ctx = webrtc_streamer(
     key="example",
     video_frame_callback=video_frame_callback,  # Pass the function itself
@@ -85,6 +84,32 @@ webrtc_ctx = webrtc_streamer(
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
+
+# Define the path to the validation data directory
+validation_data_directory = "path_to_validation_data_directory"
+
+# Load validation data
+validation_datagen = ImageDataGenerator(
+    rescale=1.0/255.0
+)
+
+validation_generator = validation_datagen.flow_from_directory(
+    validation_data_directory,
+    target_size=(128, 128),
+    batch_size=32,
+    class_mode="categorical",
+    classes=["without_mask", "with_mask"]
+)
+
+# Evaluate model
+loss, accuracy = model.evaluate(validation_generator)
+
+# Streamlit web app
+st.title("Mask Detection Model Evaluation")
+st.write("Validation Loss:", loss)
+st.write("Validation Accuracy:", accuracy)
+
+
 # Button to clear cache
 if not webrtc_ctx.video_processor:
     st.warning("Waiting for video stream to start...")

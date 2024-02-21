@@ -45,13 +45,16 @@ def draw_rectangles(frame, faces, predictions):
         if label == "No Mask":
             results = DeepFace.analyze(
                 frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
-            results = results[0]
-            age = results['age']
-            gender = results['dominant_gender']
-            cv2.putText(frame, f'Age: {age:.1f} years', (x, y - 60),
+            age = results['age'] if 'age' in results else "Unknown"
+            gender = results['gender'] if 'gender' in results else "Unknown"
+            cv2.putText(frame, f'Age: {age}', (x, y - 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
             cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        # Display mask detection result
+        cv2.putText(frame, label, (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
     
     return frame
 
@@ -143,6 +146,8 @@ st.title("Face Mask Detection")
 # Upload a video file
 uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
 
+uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
+
 if uploaded_file is not None:
     # Save the uploaded video to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -161,8 +166,9 @@ if uploaded_file is not None:
 
     # Cleanup: delete temporary video file and folder
     os.remove(temp_file_path)
+    for filename in os.listdir(temp_folder):
+        os.remove(os.path.join(temp_folder, filename))
     os.rmdir(temp_folder)
-
 # Define the path to the validation data directory
 # validation_data_directory = "data"
 

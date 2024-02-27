@@ -5,6 +5,10 @@ from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout, I
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
+# Define the length and number of features of the sequential data
+seq_length = 10
+seq_features = 50
+
 # Define LSTM model for sequential data processing
 seq_input = Input(shape=(seq_length, seq_features))
 lstm_output = LSTM(units=64)(seq_input)

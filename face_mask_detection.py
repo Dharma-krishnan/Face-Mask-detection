@@ -74,7 +74,7 @@ train_generator = train_datagen.flow_from_directory(
 
 # Training the model with synthetic sequential data
 model.fit(
-    [train_generator, synthetic_seq_data],  # Pass both image and synthetic sequential data
+    x=[train_generator, synthetic_seq_data],  # Pass both image and synthetic sequential data
     steps_per_epoch=len(train_generator),
     epochs=20
 )

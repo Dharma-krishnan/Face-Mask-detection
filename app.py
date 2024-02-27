@@ -10,9 +10,8 @@ import av
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tempfile
 import os
-from face_mask_detection import model
 # Load the trained mask detection model
-# model = load_model("mask_detection_model.h5")
+model = load_model("mask_detection_model.h5")
 
 # Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(
@@ -70,7 +69,8 @@ def video_frame_callback(frame):
     resized_frame = np.expand_dims(resized_frame, axis=0)
 
     # Perform prediction
-    predictions = combined_model.predict([resized_frame, your_sequential_data_here])
+    predictions = model.predict(resized_frame)
+    # Perform mask detection
     label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
     color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
@@ -112,7 +112,6 @@ webrtc_streamer(
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
-
 
 #uploading file from the user 
 def process_video(input_path, output_folder):

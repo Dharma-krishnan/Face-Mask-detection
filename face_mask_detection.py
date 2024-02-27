@@ -1,20 +1,9 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout, Input, LSTM, Concatenate
+from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-import numpy as np
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, LSTM, Concatenate
-from tensorflow.keras.optimizers import Adam
-
-# Generate synthetic sequential data
-seq_length = 10
-seq_features = 50
-num_samples = 1000
-
-synthetic_seq_data = np.random.rand(num_samples, seq_length, seq_features)
 
 # Initialize the base MobileNetV2 model
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
@@ -25,20 +14,10 @@ head_model = AveragePooling2D(pool_size=(4, 4))(head_model)
 head_model = Flatten(name="flatten")(head_model)
 head_model = Dense(128, activation="relu")(head_model)
 head_model = Dropout(0.5)(head_model)
+head_model = Dense(2, activation="softmax")(head_model)
 
-# Define LSTM layer for sequential data processing
-seq_input = Input(shape=(seq_length, seq_features))
-lstm_output = LSTM(units=64)(seq_input)
-
-# Concatenate CNN and LSTM outputs
-combined_input = Concatenate()([head_model, lstm_output])
-
-# Additional dense layers for further processing
-dense_output = Dense(128, activation="relu")(combined_input)
-output = Dense(2, activation="softmax")(dense_output)
-
-# Combined model
-model = Model(inputs=[base_model.input, seq_input], outputs=output)
+# Combine the base model and the head model
+model = Model(inputs=base_model.input, outputs=head_model)
 
 # Freeze the layers in the base model
 for layer in base_model.layers:
@@ -72,9 +51,9 @@ train_generator = train_datagen.flow_from_directory(
     classes=["without_mask", "with_mask"]  # Order of classes matters
 )
 
-# Training the model with synthetic sequential data
+# Training the model
 model.fit(
-    x=[train_generator, synthetic_seq_data],  # Pass both image and synthetic sequential data
+    train_generator,
     steps_per_epoch=len(train_generator),
     epochs=20
 )

@@ -4,14 +4,17 @@ from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout, Input, LSTM, Concatenate
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+import numpy as np
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, LSTM, Concatenate
+from tensorflow.keras.optimizers import Adam
 
-# Define the length and number of features of the sequential data
+# Generate synthetic sequential data
 seq_length = 10
 seq_features = 50
+num_samples = 1000
 
-# Define LSTM model for sequential data processing
-seq_input = Input(shape=(seq_length, seq_features))
-lstm_output = LSTM(units=64)(seq_input)
+synthetic_seq_data = np.random.rand(num_samples, seq_length, seq_features)
 
 # Initialize the base MobileNetV2 model
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
@@ -23,11 +26,16 @@ head_model = Flatten(name="flatten")(head_model)
 head_model = Dense(128, activation="relu")(head_model)
 head_model = Dropout(0.5)(head_model)
 
-# Concatenate LSTM output with CNN output
-combined_output = Concatenate()([head_model, lstm_output])
+# Define LSTM layer for sequential data processing
+seq_input = Input(shape=(seq_length, seq_features))
+lstm_output = LSTM(units=64)(seq_input)
 
-# Final output layer
-output = Dense(2, activation="softmax")(combined_output)
+# Concatenate CNN and LSTM outputs
+combined_input = Concatenate()([head_model, lstm_output])
+
+# Additional dense layers for further processing
+dense_output = Dense(128, activation="relu")(combined_input)
+output = Dense(2, activation="softmax")(dense_output)
 
 # Combined model
 model = Model(inputs=[base_model.input, seq_input], outputs=output)
@@ -64,9 +72,9 @@ train_generator = train_datagen.flow_from_directory(
     classes=["without_mask", "with_mask"]  # Order of classes matters
 )
 
-# Training the model
+# Training the model with synthetic sequential data
 model.fit(
-    train_generator,
+    [train_generator, synthetic_seq_data],  # Pass both image and synthetic sequential data
     steps_per_epoch=len(train_generator),
     epochs=20
 )

@@ -1,9 +1,13 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import AveragePooling2D, Flatten, Dense, Dropout, Input, LSTM, Concatenate
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+
+# Define LSTM model for sequential data processing
+seq_input = Input(shape=(seq_length, seq_features))
+lstm_output = LSTM(units=64)(seq_input)
 
 # Initialize the base MobileNetV2 model
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(128, 128, 3))
@@ -14,10 +18,15 @@ head_model = AveragePooling2D(pool_size=(4, 4))(head_model)
 head_model = Flatten(name="flatten")(head_model)
 head_model = Dense(128, activation="relu")(head_model)
 head_model = Dropout(0.5)(head_model)
-head_model = Dense(2, activation="softmax")(head_model)
 
-# Combine the base model and the head model
-model = Model(inputs=base_model.input, outputs=head_model)
+# Concatenate LSTM output with CNN output
+combined_output = Concatenate()([head_model, lstm_output])
+
+# Final output layer
+output = Dense(2, activation="softmax")(combined_output)
+
+# Combined model
+model = Model(inputs=[base_model.input, seq_input], outputs=output)
 
 # Freeze the layers in the base model
 for layer in base_model.layers:
@@ -60,4 +69,3 @@ model.fit(
 
 # Save the model
 model.save("mask_detection_model.h5")
-

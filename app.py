@@ -31,32 +31,32 @@ def detect_mask(frame):
     predictions = model.predict(resized_frame)
     return predictions
 
-def draw_rectangles(frame, faces, predictions):
-    for (x, y, w, h), prediction in zip(faces, predictions):
-        # Perform mask detection
-        label = "Mask" if np.argmax(prediction) == 1 else "No Mask"
-        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
-        thickness = 2 if label == "Mask" else 3
+# def draw_rectangles(frame, faces, predictions):
+#     for (x, y, w, h), prediction in zip(faces, predictions):
+#         # Perform mask detection
+#         label = "Mask" if np.argmax(prediction) == 1 else "No Mask"
+#         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+#         thickness = 2 if label == "Mask" else 3
         
-        # Draw rectangle around the face
-        cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
+#         # Draw rectangle around the face
+#         cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
         
-        # If no mask is detected, estimate age and gender
-        if label == "No Mask":
-            results = DeepFace.analyze(
-                frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
-            age = results['age'] if 'age' in results else "Unknown"
-            gender = results['gender'] if 'gender' in results else "Unknown"
-            cv2.putText(frame, f'Age: {age}', (x, y - 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-            cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+#         # If no mask is detected, estimate age and gender
+#         if label == "No Mask":
+#             results = DeepFace.analyze(
+#                 frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
+#             age = results['age'] if 'age' in results else "Unknown"
+#             gender = results['gender'] if 'gender' in results else "Unknown"
+#             cv2.putText(frame, f'Age: {age}', (x, y - 60),
+#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+#             cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
+#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-        # Display mask detection result
-        cv2.putText(frame, label, (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+#         # Display mask detection result
+#         cv2.putText(frame, label, (x, y-10),
+#                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
     
-    return frame
+#     return frame
 
 # Define the video frame callback function
 
@@ -138,35 +138,37 @@ def process_video(input_path, output_folder):
 
     video_capture.release()
 
-st.title("Face Mask Detection")
 
 # Upload a video file
-st.title("Face Mask Detection")
+# st.title("Upload A Video for Detection")
 
-# Upload a video file
-uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
+# # Upload a video file
+# uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
 
-if uploaded_file is not None:
-    # Save the uploaded video to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(uploaded_file.read())
-        temp_file_path = temp_file.name
+# if uploaded_file is not None:
+#     # Save the uploaded video to a temporary file
+#     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+#         temp_file.write(uploaded_file.read())
+#         temp_file_path = temp_file.name
 
-    # Create a temporary folder to store processed frames
-    temp_folder = tempfile.mkdtemp()
+#     # Create a temporary folder to store processed frames
+#     temp_folder = tempfile.mkdtemp()
 
-    # Process the video and save frames with detections
-    process_video(temp_file_path, temp_folder)
+#     # Process the video and save frames with detections
+#     process_video(temp_file_path, temp_folder)
 
-    # Display the processed frames as images
-    for filename in sorted(os.listdir(temp_folder)):
-        st.image(os.path.join(temp_folder, filename))
+#     # Display the processed frames as images
+#     for filename in sorted(os.listdir(temp_folder)):
+#         st.image(os.path.join(temp_folder, filename))
 
-    # Cleanup: delete temporary video file and folder
-    os.remove(temp_file_path)
-    for filename in os.listdir(temp_folder):
-        os.remove(os.path.join(temp_folder, filename))
-    os.rmdir(temp_folder)
+#     # Cleanup: delete temporary video file and folder
+#     os.remove(temp_file_path)
+#     for filename in os.listdir(temp_folder):
+#         os.remove(os.path.join(temp_folder, filename))
+#     os.rmdir(temp_folder)
+
+
+
 # Define the path to the validation data directory
 # validation_data_directory = "data"
 

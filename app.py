@@ -10,7 +10,7 @@ import av
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tempfile
 import os
-from face_mask_detection import combined_model
+from face_mask_detection import model
 # Load the trained mask detection model
 # model = load_model("mask_detection_model.h5")
 

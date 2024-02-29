@@ -56,8 +56,6 @@ def predict_age_gender(face):
     gender_prediction = gender_model.predict(face)[0]
     gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
 
-    st.write(f"Age prediction: {age_prediction}")
-    st.write(f"Gender prediction: {gender_prediction}")
     return age, gender
 
 # Define the video frame callback function
@@ -79,8 +77,7 @@ def video_frame_callback(frame):
         
         # Predict age and gender
         age, gender = predict_age_gender(face)
-        st.write(f"Predicted Age: {age}")
-        st.write(f"Predicted Gender: {gender}")
+
         # Display mask detection and age-gender prediction results
         cv2.putText(img, f'Mask: {label}', (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
         cv2.putText(img, f'Age: {age}', (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)

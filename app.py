@@ -4,22 +4,20 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from deepface import DeepFace
 from streamlit_webrtc import webrtc_streamer
 import av
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-import tempfile
-import os
+
 # Load the trained mask detection model
 model = load_model("mask_detection_model.h5")
 
+# Load Levi-Hassner age and gender models
+age_model = load_model("age.h5")
+gender_model = load_model("gender.h5")
+
 # Load the pre-trained face detection model
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 # Function for real-time mask detection
-
-
 def detect_mask(frame):
     # Preprocess the frame
     resized_frame = cv2.resize(frame, (128, 128))
@@ -27,78 +25,53 @@ def detect_mask(frame):
     resized_frame = preprocess_input(resized_frame)
     resized_frame = np.expand_dims(resized_frame, axis=0)
 
-# Perform prediction
+    # Perform prediction
     predictions = model.predict(resized_frame)
     return predictions
 
-# def draw_rectangles(frame, faces, predictions):
-#     for (x, y, w, h), prediction in zip(faces, predictions):
-#         # Perform mask detection
-#         label = "Mask" if np.argmax(prediction) == 1 else "No Mask"
-#         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
-#         thickness = 2 if label == "Mask" else 3
-        
-#         # Draw rectangle around the face
-#         cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
-        
-#         # If no mask is detected, estimate age and gender
-#         if label == "No Mask":
-#             results = DeepFace.analyze(
-#                 frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
-#             age = results['age'] if 'age' in results else "Unknown"
-#             gender = results['gender'] if 'gender' in results else "Unknown"
-#             cv2.putText(frame, f'Age: {age}', (x, y - 60),
-#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-#             cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
-#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+# Function to predict age and gender
+def predict_age_gender(face):
+    face = cv2.resize(face, (64, 64))
+    face = face.astype("float") / 255.0
+    face = np.expand_dims(face, axis=0)
 
-#         # Display mask detection result
-#         cv2.putText(frame, label, (x, y-10),
-#                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-    
-#     return frame
+    # Predict age
+    age_prediction = age_model.predict(face)[0]
+
+    # Predict gender
+    gender_prediction = gender_model.predict(face)[0]
+
+    return age_prediction, gender_prediction
 
 # Define the video frame callback function
-
-
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
-    resized_frame = cv2.resize(img, (128, 128))  # Corrected resize function
-    resized_frame = img_to_array(resized_frame)
-    resized_frame = preprocess_input(resized_frame)
-    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-    # Perform prediction
-    predictions = model.predict(resized_frame)
-    # Perform mask detection
-    label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
-    color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
-
+    # Detect faces
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
 
-    # Display the frame with the label
+    # Perform mask detection and age-gender prediction
     for (x, y, w, h) in faces:
-        # If no mask is detected, estimate age and gender
-        if label == "No Mask":
-            results = DeepFace.analyze(
-                img[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
-            results = results[0]
-            age = results['age']
-            gender = results['dominant_gender']
-            cv2.putText(img, f'Age: {age:.1f} years', (x, y - 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-            cv2.putText(img, f'Gender: {gender}', (x, y - 40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        face = img[y:y+h, x:x+w]
+        
+        # Perform mask detection
+        mask_prediction = detect_mask(face)
+        label = "Mask" if np.argmax(mask_prediction) == 1 else "No Mask"
+        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        
+        # Predict age and gender
+        age_prediction, gender_prediction = predict_age_gender(face)
+        age = np.argmax(age_prediction)
+        gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
 
-        # Display mask detection result
+        # Display mask detection and age-gender prediction results
+        cv2.putText(img, f'Mask: {label}', (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        cv2.putText(img, f'Age: {age}', (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        cv2.putText(img, f'Gender: {gender}', (x, y - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv2.putText(img, label, (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
     return av.VideoFrame.from_ndarray(img, format="bgr24")
-
 
 # Streamlit web app
 st.title("Face Mask Detection")

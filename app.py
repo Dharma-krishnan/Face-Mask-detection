@@ -10,7 +10,7 @@ from streamlit_webrtc import webrtc_streamer
 import av
 
 # Load the pre-trained models
-mask_model = load_model("last.pt")  # YOLOv5 model for mask detection
+mask_model = load_model("last")  # YOLOv5 model for mask detection
 age_model = load_model("age.h5")     # Pre-trained model for age prediction
 gender_model = load_model("gender.h5") # Pre-trained model for gender prediction
 

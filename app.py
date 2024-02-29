@@ -20,7 +20,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 # Function for real-time mask detection, age, and gender prediction
 def detect_mask_age_gender(frame):
     # Perform face detection using YOLOv5
-    results = detect(frame, weights="path/to/your/pretrained_model.pt")
+    results = detect(frame, weights="last.pt")
 
     for result in results:
         label = result["label"]

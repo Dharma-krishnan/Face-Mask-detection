@@ -5,78 +5,100 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from deepface import DeepFace
-from yolov5 import detect
 from streamlit_webrtc import webrtc_streamer
 import av
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import tempfile
+import os
+# Load the trained mask detection model
+model = load_model("last.pt")
 
-# Load the pre-trained models
-mask_model = load_model("last")  # YOLOv5 model for mask detection
-age_model = load_model("age.h5")     # Pre-trained model for age prediction
-gender_model = load_model("gender.h5") # Pre-trained model for gender prediction
+# Load the pre-trained face detection model
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Load the pre-trained face detection model for YOLOv5
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+# Function for real-time mask detection
 
-# Function for real-time mask detection, age, and gender prediction
-def detect_mask_age_gender(frame):
-    # Perform face detection using YOLOv5
-    results = detect(frame, weights="last.pt")
 
-    for result in results:
-        label = result["label"]
-        confidence = result["confidence"]
-        box = result["box"]
-        x, y, w, h = box
+def detect_mask(frame):
+    # Preprocess the frame
+    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-        # If a face is detected
-        if label == "face":
-            # Crop the face region
-            face_roi = frame[y:y+h, x:x+w]
+# Perform prediction
+    predictions = model.predict(resized_frame)
+    return predictions
 
-            # Perform mask detection using YOLOv5
-            mask_label = detect_mask_in_roi(face_roi)
+# def draw_rectangles(frame, faces, predictions):
+#     for (x, y, w, h), prediction in zip(faces, predictions):
+#         # Perform mask detection
+#         label = "Mask" if np.argmax(prediction) == 1 else "No Mask"
+#         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+#         thickness = 2 if label == "Mask" else 3
+        
+#         # Draw rectangle around the face
+#         cv2.rectangle(frame, (x, y), (x + w, y + h), color, thickness)
+        
+#         # If no mask is detected, estimate age and gender
+#         if label == "No Mask":
+#             results = DeepFace.analyze(
+#                 frame[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
+#             age = results['age'] if 'age' in results else "Unknown"
+#             gender = results['gender'] if 'gender' in results else "Unknown"
+#             cv2.putText(frame, f'Age: {age}', (x, y - 60),
+#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+#             cv2.putText(frame, f'Gender: {gender}', (x, y - 40),
+#                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-            # Display mask prediction
-            cv2.putText(frame, f'Mask: {mask_label}', (x, y-50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+#         # Display mask detection result
+#         cv2.putText(frame, label, (x, y-10),
+#                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+    
+#     return frame
 
-            if mask_label == "No Mask":  # If no mask is detected, perform age and gender prediction
-                # Preprocess the face for age and gender prediction
-                face_for_prediction = cv2.resize(face_roi, (224, 224))
-                face_for_prediction = img_to_array(face_for_prediction)
-                face_for_prediction = preprocess_input(face_for_prediction)
-                face_for_prediction = np.expand_dims(face_for_prediction, axis=0)
+# Define the video frame callback function
 
-                # Perform age prediction
-                age_prediction = age_model.predict(face_for_prediction)
-                age_class = np.argmax(age_prediction)
-                age_classes = ['(0-2)', '(3-9)', '(10-19)', '(20-29)', '(30-39)', '(40-49)', '(50-59)', '(60-69)', '(70+)']
-                predicted_age = age_classes[age_class]
 
-                # Perform gender prediction
-                gender_prediction = gender_model.predict(face_for_prediction)
-                gender = "Male" if gender_prediction[0][0] > 0.5 else "Female"
+def video_frame_callback(frame):
+    img = frame.to_ndarray(format="bgr24")
+    resized_frame = cv2.resize(img, (128, 128))  # Corrected resize function
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
 
-                # Display age and gender prediction
-                cv2.putText(frame, f'Age: {predicted_age}', (x, y - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.putText(frame, f'Gender: {gender}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    # Perform prediction
+    predictions = model.predict(resized_frame)
+    # Perform mask detection
+    label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
+    color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
-    return frame
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
 
-# Placeholder function for mask detection within a region of interest (ROI)
-def detect_mask_in_roi(face_roi):
-    # Convert the face ROI to grayscale for better processing
-    gray_face = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
+    # Display the frame with the label
+    for (x, y, w, h) in faces:
+        # If no mask is detected, estimate age and gender
+        if label == "No Mask":
+            results = DeepFace.analyze(
+                img[y:y+h, x:x+w], actions=['age', 'gender'], enforce_detection=False)
+            results = results[0]
+            age = results['age']
+            gender = results['dominant_gender']
+            cv2.putText(img, f'Age: {age:.1f} years', (x, y - 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(img, f'Gender: {gender}', (x, y - 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-    # Apply face mask detection logic (example logic)
-    # For demonstration purposes, let's assume if there's a grayscale pixel intensity above a certain threshold, we consider it as a mask
-    # You can replace this with your actual mask detection model or algorithm
-    mask_threshold = 100  # Adjust this threshold as needed
-    avg_intensity = np.mean(gray_face)
+        # Display mask detection result
+        cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+        cv2.putText(img, label, (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-    if avg_intensity > mask_threshold:
-        return "Mask"
-    else:
-        return "No Mask"
+    return av.VideoFrame.from_ndarray(img, format="bgr24")
+
 
 # Streamlit web app
 st.title("Face Mask Detection")
@@ -84,9 +106,119 @@ st.title("Face Mask Detection")
 # Start the webcam stream
 webrtc_streamer(
     key="example",
-    video_processor_factory=detect_mask_age_gender,
+    video_frame_callback=video_frame_callback,  # Pass the function itself
     async_processing=True,
     rtc_configuration={
         "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
     }
 )
+
+#uploading file from the user 
+def process_video(input_path, output_folder):
+    video_capture = cv2.VideoCapture(input_path)
+    frame_count = 0
+
+    while True:
+        ret, frame = video_capture.read()
+        if not ret:
+            break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(
+            gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+        predictions = detect_mask(frame)
+        processed_frame = draw_rectangles(frame, faces, predictions)
+
+        # Save the processed frame as an image
+        output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+        cv2.imwrite(output_path, processed_frame)
+
+        frame_count += 1
+
+    video_capture.release()
+
+
+# Upload a video file
+# st.title("Upload A Video for Detection")
+
+# # Upload a video file
+# uploaded_file = st.file_uploader("Upload a video", type=["mp4"])
+
+# if uploaded_file is not None:
+#     # Save the uploaded video to a temporary file
+#     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+#         temp_file.write(uploaded_file.read())
+#         temp_file_path = temp_file.name
+
+#     # Create a temporary folder to store processed frames
+#     temp_folder = tempfile.mkdtemp()
+
+#     # Process the video and save frames with detections
+#     process_video(temp_file_path, temp_folder)
+
+#     # Display the processed frames as images
+#     for filename in sorted(os.listdir(temp_folder)):
+#         st.image(os.path.join(temp_folder, filename))
+
+#     # Cleanup: delete temporary video file and folder
+#     os.remove(temp_file_path)
+#     for filename in os.listdir(temp_folder):
+#         os.remove(os.path.join(temp_folder, filename))
+#     os.rmdir(temp_folder)
+
+
+
+# Define the path to the validation data directory
+# validation_data_directory = "data"
+
+# # Load validation data
+# validation_datagen = ImageDataGenerator(
+#     rescale=1.0/255.0
+# )
+
+# validation_generator = validation_datagen.flow_from_directory(
+#     validation_data_directory,
+#     target_size=(128, 128),
+#     batch_size=32,
+#     class_mode="categorical",
+#     classes=["without_mask", "with_mask"]
+# )
+
+# Evaluate model
+# loss, accuracy = model.evaluate(validation_generator)
+
+# # Streamlit web app
+# st.title("Mask Detection Model Evaluation")
+# st.write("Validation Loss:", loss)  #237/237 [==============================] - 26s 107ms/step - loss: 0.0137 - accuracy: 0.996
+# st.write("Validation Accuracy:", accuracy)
+
+
+
+footer="""<style>
+a:link , a:visited{
+color: blue;
+background-color: transparent;
+text-decoration: underline;
+}
+
+a:hover,  a:active {
+color: red;
+background-color: transparent;
+text-decoration: underline;
+}
+
+.footer {
+position: fixed;
+left: 0;
+bottom: 0;
+width: 100%;
+background-color: white;
+color: black;
+text-align: center;
+}
+</style>
+<div class="footer">
+<p>Developed by <a style='display: block; text-align: center;' href="https://dharmakrishnan.me" target="_blank">Dharma Krishnan R</a></p>
+</div>
+"""
+st.markdown(footer,unsafe_allow_html=True)

@@ -1,56 +1,107 @@
 import streamlit as st
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, model_from_json
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from streamlit_webrtc import webrtc_streamer
 import av
 
-# Load models (ensure correct file paths)
-mask_model = load_model("mask_detection_model.h5")
-age_model = load_model("age.h5")  # Use `load_model` directly for .h5 files
-gender_model = load_model("gender.h5")
+# Load the trained mask detection model
+model = load_model("mask_detection_model.h5")
+
+# Load Levi-Hassner age model architecture from the .json file
+with open("age.json", "r") as json_file:
+    age_model_json = json_file.read()
+age_model = model_from_json(age_model_json)
+
+# Load the pretrained age model weights from the .h5 file
+age_model.load_weights("age.h5")
+
+# Load Levi-Hassner gender model architecture from the .json file
+with open("gender.json", "r") as json_file:
+    gender_model_json = json_file.read()
+gender_model = model_from_json(gender_model_json)
+
+# Load the pretrained gender model weights from the .h5 file
+gender_model.load_weights("gender.h5")
+
+# Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Corrected preprocessing for age-gender models
-def preprocess_face(face):
+# Function for real-time mask detection
+def detect_mask(frame):
+    # Preprocess the frame
+    resized_frame = cv2.resize(frame, (128, 128))
+    resized_frame = img_to_array(resized_frame)
+    resized_frame = preprocess_input(resized_frame)
+    resized_frame = np.expand_dims(resized_frame, axis=0)
+
+    # Perform prediction
+    predictions = model.predict(resized_frame)
+    return predictions
+
+# Function to predict age and gender
+def predict_age_gender(face):
     face = cv2.resize(face, (64, 64))
-    face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
     face = face.astype("float") / 255.0
     face = np.expand_dims(face, axis=0)
-    return face
 
-# Define video frame callback
+    # Predict age
+    age_prediction = age_model.predict(face)[0]
+    age_classes = ['(0-2)', '(3-9)', '(10-19)', '(20-29)', '(30-39)', '(40-49)', '(50-59)', '(60-69)', '(70+)']
+    age = age_classes[np.argmax(age_prediction)]
+
+    # Predict gender
+    gender_prediction = gender_model.predict(face)[0]
+    gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
+
+    st.write(f"Age prediction: {age_prediction}")
+    st.write(f"Gender prediction: {gender_prediction}")
+    return age, gender
+
+# Define the video frame callback function
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(100, 100))
 
+    # Detect faces
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+
+    # Perform mask detection and age-gender prediction
     for (x, y, w, h) in faces:
         face = img[y:y+h, x:x+w]
-
-        # Mask detection
-        mask_prediction = mask_model.predict(preprocess_input(img_to_array(cv2.resize(face, (128, 128)))))
-        label = "Mask" if mask_prediction[0][0] > 0.5 else "No Mask"  # Adjust threshold if needed
+        
+        # Perform mask detection
+        mask_prediction = detect_mask(face)
+        label = "Mask" if np.argmax(mask_prediction) == 1 else "No Mask"
         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        
+        # Predict age and gender
+        age, gender = predict_age_gender(face)
+        st.write(f"Predicted Age: {age}")
+        st.write(f"Predicted Gender: {gender}")
+        # Display mask detection and age-gender prediction results
         cv2.putText(img, f'Mask: {label}', (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-
-        # Age-gender prediction
-        face = preprocess_face(face)
-        age_prediction = age_model.predict(face)[0]
-        age = age_classes[np.argmax(age_prediction)]
-        gender_prediction = gender_model.predict(face)[0]
-        gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
         cv2.putText(img, f'Age: {age}', (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         cv2.putText(img, f'Gender: {gender}', (x, y - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
 
     return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# Streamlit app
+# Streamlit web app
 st.title("Face Mask Detection")
-webrtc_streamer(key="example", video_frame_callback=video_frame_callback, async_processing=True, rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+
+# Start the webcam stream
+webrtc_streamer(
+    key="example",
+    video_frame_callback=video_frame_callback,  # Pass the function itself
+    async_processing=True,
+    rtc_configuration={
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    }
+)
+
 # #uploading file from the user 
 # def process_video(input_path, output_folder):
 #     video_capture = cv2.VideoCapture(input_path)

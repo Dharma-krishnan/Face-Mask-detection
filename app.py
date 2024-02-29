@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, model_from_json
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from streamlit_webrtc import webrtc_streamer
@@ -10,9 +10,21 @@ import av
 # Load the trained mask detection model
 model = load_model("mask_detection_model.h5")
 
-# Load Levi-Hassner age and gender models
-age_model = load_model("age.h5")
-gender_model = load_model("gender.h5")
+# Load Levi-Hassner age model architecture from the .json file
+with open("age.json", "r") as json_file:
+    age_model_json = json_file.read()
+age_model = model_from_json(age_model_json)
+
+# Load the pretrained age model weights from the .h5 file
+age_model.load_weights("age.h5")
+
+# Load Levi-Hassner gender model architecture from the .json file
+with open("gender.json", "r") as json_file:
+    gender_model_json = json_file.read()
+gender_model = model_from_json(gender_model_json)
+
+# Load the pretrained gender model weights from the .h5 file
+gender_model.load_weights("gender.h5")
 
 # Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -37,11 +49,14 @@ def predict_age_gender(face):
 
     # Predict age
     age_prediction = age_model.predict(face)[0]
+    age_classes = ['(0-2)', '(3-9)', '(10-19)', '(20-29)', '(30-39)', '(40-49)', '(50-59)', '(60-69)', '(70+)']
+    age = age_classes[np.argmax(age_prediction)]
 
     # Predict gender
     gender_prediction = gender_model.predict(face)[0]
+    gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
 
-    return age_prediction, gender_prediction
+    return age, gender
 
 # Define the video frame callback function
 def video_frame_callback(frame):
@@ -61,9 +76,7 @@ def video_frame_callback(frame):
         color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
         
         # Predict age and gender
-        age_prediction, gender_prediction = predict_age_gender(face)
-        age = np.argmax(age_prediction)
-        gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
+        age, gender = predict_age_gender(face)
 
         # Display mask detection and age-gender prediction results
         cv2.putText(img, f'Mask: {label}', (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
@@ -86,29 +99,29 @@ webrtc_streamer(
     }
 )
 
-#uploading file from the user 
-def process_video(input_path, output_folder):
-    video_capture = cv2.VideoCapture(input_path)
-    frame_count = 0
+# #uploading file from the user 
+# def process_video(input_path, output_folder):
+#     video_capture = cv2.VideoCapture(input_path)
+#     frame_count = 0
 
-    while True:
-        ret, frame = video_capture.read()
-        if not ret:
-            break
+#     while True:
+#         ret, frame = video_capture.read()
+#         if not ret:
+#             break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(
-            gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
-        predictions = detect_mask(frame)
-        processed_frame = draw_rectangles(frame, faces, predictions)
+#         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#         faces = face_cascade.detectMultiScale(
+#             gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+#         predictions = detect_mask(frame)
+#         processed_frame = draw_rectangles(frame, faces, predictions)
 
-        # Save the processed frame as an image
-        output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
-        cv2.imwrite(output_path, processed_frame)
+#         # Save the processed frame as an image
+#         output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+#         cv2.imwrite(output_path, processed_frame)
 
-        frame_count += 1
+#         frame_count += 1
 
-    video_capture.release()
+#     video_capture.release()
 
 
 # Upload a video file

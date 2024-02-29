@@ -11,7 +11,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tempfile
 import os
 # Load the trained mask detection model
-model = load_model("last.pt")
+model = load_model("mask_detection_model.h5")
 
 # Load the pre-trained face detection model
 face_cascade = cv2.CascadeClassifier(

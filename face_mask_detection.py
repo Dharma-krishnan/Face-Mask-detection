@@ -59,4 +59,4 @@ model.fit(
 )
 
 # Save the model
-model.save("last.pt")
+model.save("mask_detection_model.h5")

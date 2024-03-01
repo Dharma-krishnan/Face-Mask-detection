@@ -10,34 +10,15 @@ import av
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import tempfile
 import os
-from yolov5 import detect
 # Load the trained mask detection model
-# model = load_model("mask_detection_model.h5")
+model = load_model("mask_detection_model.h5")
 
 # Load the pre-trained face detection model
-# face_cascade = cv2.CascadeClassifier(
-#     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 # Function for real-time mask detection
 
-def detect_faces_yolov5(frame):
-    # Detect objects using YOLOv5 with your trained model
-    results = detect(frame, weights='best.pt')
-    faces_with_masks = []
-    faces_without_masks = []
-
-    # Filter detected objects to include faces with and without masks
-    for detection in results.pred:
-        label = detection['label']
-        if label.startswith('mask_'):
-            label = label.replace('mask_', '')
-            x1, y1, x2, y2 = detection['box']
-            if label == 'mask':
-                faces_with_masks.append((x1, y1, x2 - x1, y2 - y1))  # Convert box to (x, y, w, h) format
-            elif label == 'nomask':
-                faces_without_masks.append((x1, y1, x2 - x1, y2 - y1))  # Convert box to (x, y, w, h) format
-
-    return faces_with_masks, faces_without_masks
 
 def detect_mask(frame):
     # Preprocess the frame
@@ -49,6 +30,7 @@ def detect_mask(frame):
 # Perform prediction
     predictions = model.predict(resized_frame)
     return predictions
+
 
 # Define the video frame callback function
 
@@ -66,12 +48,9 @@ def video_frame_callback(frame):
     label = "Mask" if np.argmax(predictions) == 1 else "No Mask"
     color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
-    # Detect faces using YOLOv5
-    faces = detect_faces_yolov5(img)
-
-    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # faces = face_cascade.detectMultiScale(
-    #     gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
 
     # Display the frame with the label
     for (x, y, w, h) in faces:
@@ -108,29 +87,29 @@ webrtc_streamer(
     }
 )
 
-# #uploading file from the user 
-# def process_video(input_path, output_folder):
-#     video_capture = cv2.VideoCapture(input_path)
-#     frame_count = 0
+#uploading file from the user 
+def process_video(input_path, output_folder):
+    video_capture = cv2.VideoCapture(input_path)
+    frame_count = 0
 
-#     while True:
-#         ret, frame = video_capture.read()
-#         if not ret:
-#             break
+    while True:
+        ret, frame = video_capture.read()
+        if not ret:
+            break
 
-#         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#         faces = face_cascade.detectMultiScale(
-#             gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
-#         predictions = detect_mask(frame)
-#         processed_frame = draw_rectangles(frame, faces, predictions)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(
+            gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+        predictions = detect_mask(frame)
+        processed_frame = draw_rectangles(frame, faces, predictions)
 
-#         # Save the processed frame as an image
-#         output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
-#         cv2.imwrite(output_path, processed_frame)
+        # Save the processed frame as an image
+        output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+        cv2.imwrite(output_path, processed_frame)
 
-#         frame_count += 1
+        frame_count += 1
 
-#     video_capture.release()
+    video_capture.release()
 
 
 # Upload a video file
@@ -217,4 +196,3 @@ text-align: center;
 </div>
 """
 st.markdown(footer,unsafe_allow_html=True)
-

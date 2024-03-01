@@ -48,7 +48,7 @@ train_generator = train_datagen.flow_from_directory(
     target_size=(128, 128),
     batch_size=32,
     class_mode="categorical",
-    classes=[ "with_mask","without_mask"]  # Order of classes matters
+    classes=["without_mask", "with_mask"]  # Order of classes matters
 )
 
 # Training the model
@@ -60,5 +60,3 @@ model.fit(
 
 # Save the model
 model.save("mask_detection_model.h5")
-model.save("age.h5")
-model.save("gender.h5")

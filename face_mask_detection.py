@@ -60,3 +60,5 @@ model.fit(
 
 # Save the model
 model.save("mask_detection_model.h5")
+model.save("age.h5")
+model.save("gender.h5")

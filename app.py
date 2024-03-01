@@ -58,6 +58,52 @@ def predict_age_gender(face):
 
     return age, gender
 
+# Function to process uploaded image
+def process_image(uploaded_image):
+    # Read the uploaded image
+    img = cv2.imdecode(np.frombuffer(uploaded_image.read(), np.uint8), 1)
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Detect faces
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+
+    # Perform mask detection and age-gender prediction
+    for (x, y, w, h) in faces:
+        face = img[y:y+h, x:x+w]
+        
+        # Perform mask detection
+        mask_prediction = detect_mask(face)
+        label = "Mask" if np.argmax(mask_prediction) == 1 else "No Mask"
+        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        
+        # If no mask, predict age and gender
+        if label == "No Mask":
+            age, gender = predict_age_gender(face)
+
+            # Display age and gender prediction results
+            cv2.putText(img, f'Age: {age}', (x, y - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            cv2.putText(img, f'Gender: {gender}', (x, y - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        
+        # Display mask detection result
+        cv2.putText(img, f'Mask: {label}', (x, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+
+    return img
+# Streamlit web app
+st.title("Upload a JPG Image")
+
+# Upload image
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg"])
+
+if uploaded_file is not None:
+    # Process the uploaded image
+    processed_image = process_image(uploaded_file)
+
+    # Display the processed image
+    st.image(processed_image, channels="BGR")
+    
 # Define the video frame callback function
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")

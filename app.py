@@ -12,26 +12,32 @@ import tempfile
 import os
 from yolov5 import detect
 # Load the trained mask detection model
-model = load_model("mask_detection_model.h5")
+# model = load_model("mask_detection_model.h5")
 
 # Load the pre-trained face detection model
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+# face_cascade = cv2.CascadeClassifier(
+#     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 # Function for real-time mask detection
 
 def detect_faces_yolov5(frame):
-    # Detect objects using YOLOv5
-    results = detect(frame)
-    faces = []
+    # Detect objects using YOLOv5 with your trained model
+    results = detect(frame, weights='best.pt')
+    faces_with_masks = []
+    faces_without_masks = []
 
-    # Filter detected objects to only include faces
+    # Filter detected objects to include faces with and without masks
     for detection in results.pred:
-        if detection['label'] == 'face':
+        label = detection['label']
+        if label.startswith('mask_'):
+            label = label.replace('mask_', '')
             x1, y1, x2, y2 = detection['box']
-            faces.append((x1, y1, x2 - x1, y2 - y1))  # Convert box to (x, y, w, h) format
+            if label == 'mask':
+                faces_with_masks.append((x1, y1, x2 - x1, y2 - y1))  # Convert box to (x, y, w, h) format
+            elif label == 'nomask':
+                faces_without_masks.append((x1, y1, x2 - x1, y2 - y1))  # Convert box to (x, y, w, h) format
 
-    return faces
+    return faces_with_masks, faces_without_masks
 
 def detect_mask(frame):
     # Preprocess the frame

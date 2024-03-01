@@ -48,7 +48,7 @@ train_generator = train_datagen.flow_from_directory(
     target_size=(128, 128),
     batch_size=32,
     class_mode="categorical",
-    classes=["without_mask", "with_mask"]  # Order of classes matters
+    classes=[ "with_mask","without_mask"]  # Order of classes matters
 )
 
 # Training the model

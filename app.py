@@ -41,14 +41,32 @@ def detect_mask(frame):
     predictions = model.predict(resized_frame)
     return predictions
 
-# Function to predict age and gender
+# Function to predict age and gender for video
+# def predict_age_gender(face):
+#     face = cv2.resize(face, (64, 64))
+#     face = face.astype("float") / 255.0
+#     face = np.expand_dims(face, axis=0)
+
+#     # Predict age
+#     age_prediction = age_model.predict(face)[0]
+#     age_classes = ['(0-2)', '(3-9)', '(10-19)', '(20-29)', '(30-39)', '(40-49)', '(50-59)', '(60-69)', '(70+)']
+#     age = age_classes[np.argmax(age_prediction)]
+
+#     # Predict gender
+#     gender_prediction = gender_model.predict(face)[0]
+#     gender = "Male" if np.argmax(gender_prediction) == 0 else "Female"
+
+#     return age, gender
 def predict_age_gender(face):
-    face = cv2.resize(face, (64, 64))
-    face = face.astype("float") / 255.0
-    face = np.expand_dims(face, axis=0)
+    # Resize the input image to match the expected input size of the age model
+    resized_face = cv2.resize(face, (227, 227))
+    
+    # Preprocess the resized face image
+    resized_face = resized_face.astype("float") / 255.0
+    resized_face = np.expand_dims(resized_face, axis=0)
 
     # Predict age
-    age_prediction = age_model.predict(face)[0]
+    age_prediction = age_model.predict(resized_face)[0]
     age_classes = ['(0-2)', '(3-9)', '(10-19)', '(20-29)', '(30-39)', '(40-49)', '(50-59)', '(60-69)', '(70+)']
     age = age_classes[np.argmax(age_prediction)]
 
@@ -103,7 +121,7 @@ if uploaded_file is not None:
 
     # Display the processed image
     st.image(processed_image, channels="BGR")
-    
+
 # Define the video frame callback function
 def video_frame_callback(frame):
     img = frame.to_ndarray(format="bgr24")

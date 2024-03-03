@@ -87,29 +87,29 @@ webrtc_streamer(
     }
 )
 
-#uploading file from the user 
-def process_video(input_path, output_folder):
-    video_capture = cv2.VideoCapture(input_path)
-    frame_count = 0
+# #uploading file from the user 
+# def process_video(input_path, output_folder):
+#     video_capture = cv2.VideoCapture(input_path)
+#     frame_count = 0
 
-    while True:
-        ret, frame = video_capture.read()
-        if not ret:
-            break
+#     while True:
+#         ret, frame = video_capture.read()
+#         if not ret:
+#             break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(
-            gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
-        predictions = detect_mask(frame)
-        processed_frame = draw_rectangles(frame, faces, predictions)
+#         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#         faces = face_cascade.detectMultiScale(
+#             gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+#         predictions = detect_mask(frame)
+#         processed_frame = draw_rectangles(frame, faces, predictions)
 
-        # Save the processed frame as an image
-        output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
-        cv2.imwrite(output_path, processed_frame)
+#         # Save the processed frame as an image
+#         output_path = os.path.join(output_folder, f"frame_{frame_count}.jpg")
+#         cv2.imwrite(output_path, processed_frame)
 
-        frame_count += 1
+#         frame_count += 1
 
-    video_capture.release()
+#     video_capture.release()
 
 
 # Upload a video file
